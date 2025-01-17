@@ -29,7 +29,7 @@ def buscar_en_tailoy(producto):
     options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
 
-    service = Service(executable_path="C:/Users/victo/OneDrive/Documentos/descuentos/backend/scrapping/msedgedriver.exe")
+    service = Service(executable_path="backup/descuentos/backend/scrapping/msedgedriver.exe")
     driver = webdriver.Edge(service=service, options=options)
     
     resultados = []
