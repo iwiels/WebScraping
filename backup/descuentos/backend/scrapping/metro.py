@@ -10,7 +10,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
-# from .ripley import obtener_user_agents  # Descomentar si se usa
+from .ripley import obtener_user_agents
 
 def buscar_en_metro(producto):
     """Busca un producto en Metro usando Selenium."""
