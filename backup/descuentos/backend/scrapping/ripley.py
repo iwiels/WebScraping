@@ -30,132 +30,140 @@ def buscar_en_ripley(producto):
 
     options = Options()
     options.add_argument("--headless")
-    options.add_argument('--log-level=3')
-    options.add_argument('--silent')
-    options.add_argument('--disable-logging')
+    options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-gpu')
+    options.add_argument('--disable-software-rasterizer')
     options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
 
-    service = Service(executable_path="backup/descuentos/backend/scrapping/msedgedriver.exe")
-    driver = webdriver.Edge(service=service, options=options)
-    driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": random.choice(user_agents)})
-
-    resultados = []
-
     try:
-        driver.get("https://www.ripley.com.pe/")
+        # Intentar usar el path local primero
+        edge_path = "backup/descuentos/backend/scrapping/msedgedriver.exe"
+        # Si estamos en Render (Linux), usar el path de Linux
+        if not os.path.exists(edge_path):
+            edge_path = "/usr/bin/microsoft-edge"
+    except Exception as e:
+        print(f"Error al configurar el path del driver: {e}")
+        
+        service = Service(executable_path=edge_path)
+        driver = webdriver.Edge(service=service, options=options)
+        driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": random.choice(user_agents)})
+
+        resultados = []
+
         try:
-            search_input = WebDriverWait(driver, 15).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, 'input[type="search"]'))
-            )
-        except TimeoutException:
-            driver.quit()
-            return resultados
-
-        # Ingresar el producto y presionar Enter
-        search_input.clear()
-        search_input.send_keys(producto)
-        search_input.send_keys(Keys.RETURN)
-        pagina_actual = 1
-        max_paginas = 10
-
-        while pagina_actual <= max_paginas:
+            driver.get("https://www.ripley.com.pe/")
             try:
-                WebDriverWait(driver, 15).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.catalog-product-item"))
+                search_input = WebDriverWait(driver, 15).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, 'input[type="search"]'))
                 )
-                items = driver.find_elements(By.CSS_SELECTOR, "div.catalog-product-item")
-
             except TimeoutException:
+                driver.quit()
+                return resultados
 
-                break
+            # Ingresar el producto y presionar Enter
+            search_input.clear()
+            search_input.send_keys(producto)
+            search_input.send_keys(Keys.RETURN)
+            pagina_actual = 1
+            max_paginas = 10
 
-            for item in items:
+            while pagina_actual <= max_paginas:
                 try:
-                    # Extraer nombre
-                    nombre_elem = item.find_element(By.CSS_SELECTOR, "div.catalog-product-details__name")
-                    nombre = nombre_elem.text.strip()
+                    WebDriverWait(driver, 15).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "div.catalog-product-item"))
+                    )
+                    items = driver.find_elements(By.CSS_SELECTOR, "div.catalog-product-item")
 
-                    # Extraer link
-                    link_elem = item.find_element(By.CSS_SELECTOR, "a.catalog-product-item")
-                    link = link_elem.get_attribute("href")
+                except TimeoutException:
 
-                    # Extraer precio
-                    precio = None
+                    break
+
+                for item in items:
                     try:
-                        precio_elem = item.find_element(By.CSS_SELECTOR, "li.catalog-prices__offer-price")
-                        precio_text = precio_elem.text.strip()
-                        precio = float(re.sub(r"[^\d.]", "", precio_text))
-                    except (NoSuchElementException, ValueError):
-                        continue
+                        # Extraer nombre
+                        nombre_elem = item.find_element(By.CSS_SELECTOR, "div.catalog-product-details__name")
+                        nombre = nombre_elem.text.strip()
 
-                    # Forzar scroll para asegurar carga de la imagen
-                    try:
-                        driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", item)
-                        time.sleep(1)
-                    except:
-                        pass
+                        # Extraer link
+                        link_elem = item.find_element(By.CSS_SELECTOR, "a.catalog-product-item")
+                        link = link_elem.get_attribute("href")
 
-                    # Buscar la imagen con dos selectores
-                    imagen = None
-                    try:
-                        img_elem = item.find_element(By.CSS_SELECTOR, ".images-preview-item.is-active img")
-                        imagen = img_elem.get_attribute("src")
-                    except NoSuchElementException:
+                        # Extraer precio
+                        precio = None
                         try:
-                            img_elem = item.find_element(By.TAG_NAME, "img")
+                            precio_elem = item.find_element(By.CSS_SELECTOR, "li.catalog-prices__offer-price")
+                            precio_text = precio_elem.text.strip()
+                            precio = float(re.sub(r"[^\d.]", "", precio_text))
+                        except (NoSuchElementException, ValueError):
+                            continue
+
+                        # Forzar scroll para asegurar carga de la imagen
+                        try:
+                            driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", item)
+                            time.sleep(1)
+                        except:
+                            pass
+
+                        # Buscar la imagen con dos selectores
+                        imagen = None
+                        try:
+                            img_elem = item.find_element(By.CSS_SELECTOR, ".images-preview-item.is-active img")
                             imagen = img_elem.get_attribute("src")
                         except NoSuchElementException:
-                            print(f"No se encontró imagen para: {nombre}")
+                            try:
+                                img_elem = item.find_element(By.TAG_NAME, "img")
+                                imagen = img_elem.get_attribute("src")
+                            except NoSuchElementException:
+                                print(f"No se encontró imagen para: {nombre}")
 
-                    if imagen and not imagen.startswith('http'):
-                        imagen = f"https://www.ripley.com.pe{imagen}"
+                        if imagen and not imagen.startswith('http'):
+                            imagen = f"https://www.ripley.com.pe{imagen}"
 
-                    # Extraer descuento
-                    descuento_porcentaje = None
-                    try:
-                        descuento_tag = item.find_element(By.CSS_SELECTOR, 'div.catalog-product-details__discount-tag')
-                        descuento_texto = descuento_tag.text.strip().replace('%', '').replace('-', '')
-                        descuento_porcentaje = int(descuento_texto)
-                    except NoSuchElementException:
-                        pass  # No hay etiqueta de descuento
+                        # Extraer descuento
+                        descuento_porcentaje = None
+                        try:
+                            descuento_tag = item.find_element(By.CSS_SELECTOR, 'div.catalog-product-details__discount-tag')
+                            descuento_texto = descuento_tag.text.strip().replace('%', '').replace('-', '')
+                            descuento_porcentaje = int(descuento_texto)
+                        except NoSuchElementException:
+                            pass  # No hay etiqueta de descuento
 
-                    if nombre and precio and link:
-                        resultados.append({
-                            'nombre': nombre,
-                            'precio': precio,
-                            'link': link,
-                            'tienda': 'ripley',
-                            'imagen': imagen,
-                            'descuento': descuento_porcentaje
-                        })
+                        if nombre and precio and link:
+                            resultados.append({
+                                'nombre': nombre,
+                                'precio': precio,
+                                'link': link,
+                                'tienda': 'ripley',
+                                'imagen': imagen,
+                                'descuento': descuento_porcentaje
+                            })
 
-                except Exception as e:
-                    continue
+                    except Exception as e:
+                        continue
 
-            # Scroll al final de la página
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
+                # Scroll al final de la página
+                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                time.sleep(2)
 
-            try:
-                next_button = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "a.page-link[aria-label='Siguiente']"))
-                )
-                if next_button and next_button.is_enabled():
-                    driver.execute_script("arguments[0].click();", next_button)
-                    pagina_actual += 1
-                    time.sleep(random.uniform(4, 7))
-                else:
+                try:
+                    next_button = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "a.page-link[aria-label='Siguiente']"))
+                    )
+                    if next_button and next_button.is_enabled():
+                        driver.execute_script("arguments[0].click();", next_button)
+                        pagina_actual += 1
+                        time.sleep(random.uniform(4, 7))
+                    else:
+                        break
+                except (TimeoutException, NoSuchElementException):
+
                     break
-            except (TimeoutException, NoSuchElementException):
 
-                break
+        except Exception as e:
+            print(f"Error al buscar en Ripley: {e}")
+        finally:
+            driver.quit()
 
-    except Exception as e:
-        print(f"Error al buscar en Ripley: {e}")
-    finally:
-        driver.quit()
-
-    return resultados
+        return resultados
