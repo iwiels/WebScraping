@@ -28,6 +28,10 @@ app = Flask(__name__,
             static_url_path='')
 CORS(app)
 
+# Asegurarse de que las rutas sean absolutas
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_FOLDER = os.path.join(BASE_DIR, 'backup/descuentos/frontend')
+
 # Configurar el número máximo de workers
 MAX_WORKERS = 9  # Ajusta este número según los cores de tu CPU
 
@@ -37,8 +41,9 @@ def serve_static(path):
 
 @app.route('/')
 def index():
-    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
-        return send_from_directory(app.static_folder, 'index.html')
+    index_path = os.path.join(STATIC_FOLDER, 'index.html')
+    if os.path.exists(index_path):
+        return send_from_directory(STATIC_FOLDER, 'index.html')
     return "No index.html file found in the static folder."
 
 @app.route('/buscar', methods=['GET'])
