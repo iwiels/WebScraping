@@ -13,7 +13,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 def obtener_user_agents():
     user_agents = []
-    filepath = "C:/Users/victo/OneDrive/Documentos/descuentos/backend/scrapping/user_agents.txt"
+    filepath = "backup/descuentos/backend/scrapping/user_agents.txt"
     try:
         with open(filepath, 'r') as file:
             for line in file:
@@ -38,7 +38,7 @@ def buscar_en_ripley(producto):
     options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
 
-    service = Service(executable_path="C:/Users/victo/OneDrive/Documentos/descuentos/backend/scrapping/msedgedriver.exe")
+    service = Service(executable_path="backup/descuentos/backend/scrapping/msedgedriver.exe")
     driver = webdriver.Edge(service=service, options=options)
     driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": random.choice(user_agents)})
 
