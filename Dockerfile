@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 # Instalar Microsoft Edge y sus dependencias
 RUN apt-get update && apt-get install -y \
@@ -18,8 +18,9 @@ WORKDIR /app
 # Copiar requirements.txt
 COPY requirements.txt .
 
-# Instalar dependencias
-RUN pip install --no-cache-dir -r requirements.txt
+# Actualizar pip e instalar dependencias
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copiar el resto del código
 COPY . .
