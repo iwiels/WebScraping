@@ -15,9 +15,9 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 def buscar_en_metro(producto):
     """Busca un producto en Metro usando Selenium."""
     resultados = []
-    # user_agents = obtener_user_agents()  # Descomentar si se usa
-    # if not user_agents:
-    #     return resultados
+    user_agents = obtener_user_agents()  # Descomentar si se usa
+    if not user_agents:
+        return resultados
 
     options = Options()
     options.add_argument("--headless")  
@@ -29,7 +29,7 @@ def buscar_en_metro(producto):
     options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
 
-    service = Service(executable_path="C:/Users/victo/OneDrive/Documentos/descuentos/backend/scrapping/msedgedriver.exe")
+    service = Service(executable_path="backup/descuentos/backend/scrapping/msedgedriver.exe")
     driver = webdriver.Edge(service=service, options=options)
 
     try:
