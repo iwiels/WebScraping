@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"="width=device-width, initial-scale=1.0">
+    <title>CompraInteligente - Comparador de Precios Profesional</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="/logo.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            scroll-behavior: smooth;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: #fff;
+            padding: 5rem 0; /* Adjusted padding */
+        }
+
+        .filters-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem; /* Adjusted padding */
+        }
+
+        .btn-primary {
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+
+        #scrollTopBtn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            z-index: 1000;
+        }
+
+        footer {
+            background: #343a40;
+            color: #adb5bd;
+            padding: 3rem 0; /* Adjusted padding */
+        }
+
+        footer a:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        #pagination {
+            margin-top: 2rem; /* Added margin for spacing */
+        }
+
+        #pagination .page-link {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Theme Switch Button -->
+    <button class="theme-switch" id="themeSwitch">
+        <i class="bi bi-sun-fill" id="themeIcon"></i>
+    </button>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero-section position-relative overflow-hidden">
+            <div class="container text-center text-white">
+                <h1 class="mb-4 animate__animated animate__fadeInDown">
+                    Encuentra los Mejores Precios
+                </h1>
+                <p class="lead mb-5 animate__animated animate__fadeInUp animate__delay-1s">
+                    Compara entre miles de productos y ahorra en tus compras online
+                </p>
+                <form id="searchForm" class="animate__animated animate__fadeIn animate__delay-2s">
+                    <div class="input-group input-group-lg mx-auto" style="max-width: 700px;">
+                        <input type="text" id="producto" class="form-control border-0"
+                            placeholder="¿Qué producto estás buscando?" required>
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Search Progress Section -->
+        <section id="searchProgress" class="container my-4" style="display: none;">
+            <div class="progress mb-2" style="height: 25px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" 
+                     style="width: 0%" 
+                     id="searchProgressBar">0%</div>
+            </div>
+            <div id="searchStatus" class="text-center text-muted">
+                <p id="currentStore" class="mb-1">Iniciando búsqueda...</p>
+                <p id="progressText" class="mb-0 font-monospace" style="font-family: monospace;">
+                    Buscando productos: 0/9 tiendas
+                </p>
+            </div>
+        </section>
+
+        <!-- Filters Section -->
+        <section class="filters-section shadow-sm mb-4">
+            <div class="container">
+                <h5 class="text-center mb-4"><i class="bi bi-funnel-fill mr-2"></i> Filtros de Búsqueda</h5>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="filtroTienda">Tienda:</label>
+                        <select id="filtroTienda" class="form-control">
+                            <option value="">Todas las tiendas</option>
+                            <option value="ripley">Ripley</option>
+                            <option value="falabella">Falabella</option>
+                            <option value="oechsle">Oechsle</option>
+                            <option value="estilos">Estilos</option>
+                            <option value="tailoy">Tailoy</option>
+                            <option value="realplaza">Real Plaza</option>
+                            <option value="plazavea">Plaza Vea</option>
+                            <option value="hiraoka">Hiraoka</option>
+                            <option value="metro">Metro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="ordenarPor">Ordenar por:</label>
+                        <select id="ordenarPor" class="form-control">
+                            <option value="recomendados">Recomendados</option>
+                            <option value="precioAsc">Precio: Menor a Mayor</option>
+                            <option value="precioDesc">Precio: Mayor a Menor</option>
+                            <option value="descuentoDesc">Mayor Descuento</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label>Rango de Precio:</label>
+                        <div class="d-flex gap-2">
+                            <input type="number" id="minPrice" class="form-control" placeholder="Min">
+                            <input type="number" id="maxPrice" class="form-control" placeholder="Max">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Store Status Section -->
+        <section id="storeStatus" class="container my-4">
+            <h5 class="text-center mb-3">Estado de Búsqueda</h5>
+            <div class="row justify-content-center">
+                <div class="col-md-8 text-center">
+                    <ul class="list-unstyled">
+                        <li id="status-ripley">Ripley: <span>Buscando...</span></li>
+                        <li id="status-falabella">Falabella: <span>Buscando...</span></li>
+                        <li id="status-oechsle">Oechsle: <span>Buscando...</span></li>
+                        <li id="status-estilos">Estilos: <span>Buscando...</span></li>
+                        <li id="status-tailoy">Tailoy: <span>Buscando...</span></li>
+                        <li id="status-realplaza">Real Plaza: <span>Buscando...</span></li>
+                        <li id="status-plazavea">Plaza Vea: <span>Buscando...</span></li>
+                        <li id="status-hiraoka">Hiraoka: <span>Buscando...</span></li>
+                        <li id="status-metro">Metro: <span>Buscando...</span></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="resultados-section" class="container">
+            <div id="resultados" class="row g-4">
+                <!-- Results will be dynamically loaded here -->
+            </div>
+            <nav aria-label="Page navigation" id="pagination" class="d-flex justify-content-center">
+                <ul class="pagination">
+                    <!-- Pagination links will be dynamically loaded here -->
+                </ul>
+            </nav>
+        </section>
+    </main>
+
+    <!-- Scroll to Top -->
+    <button id="scrollTopBtn" class="btn btn-primary d-flex align-items-center justify-content-center">
+        <i class="bi bi-arrow-up"></i>
+    </button>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-6 mt-6">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 text-center text-md-left">
+                    <h5 class="mb-3">CompraInteligente</h5>
+                    <p class="mb-0">Tu comparador de precios de confianza</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h5 class="mb-3">Enlaces Rápidos</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50">Inicio</a></li>
+                        <li><a href="#" class="text-white-50">Categorías</a></li>
+                        <li><a href="#" class="text-white-50">Tiendas</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4 text-center text-md-right">
+                    <h5 class="mb-3">Síguenos</h5>
+                    <div class="d-flex justify-content-center justify-content-md-end">
+                        <a href="#" class="text-white-50 mx-2"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="text-white-50 mx-2"><i class="bi bi-twitter"></i></a>
+                        <a href="#" class="text-white-50 mx-2"><i class="bi bi-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Scroll to Top Button
+        const scrollTopBtn = document.getElementById('scrollTopBtn');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                scrollTopBtn.style.display = 'block';
+            } else {
+                scrollTopBtn.style.display = 'none';
+            }
+        });
+        scrollTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Theme Switch Logic
+        const themeSwitch = document.getElementById('themeSwitch');
+        const themeIcon = document.getElementById('themeIcon');
+        const html = document.documentElement;
+
+        themeSwitch.addEventListener('click', () => {
+            if (html.getAttribute('data-theme') === 'light') {
+                html.setAttribute('data-theme', 'dark');
+                themeIcon.classList.replace('bi-sun-fill', 'bi-moon-fill');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light');
+                themeIcon.classList.replace('bi-moon-fill', 'bi-sun-fill');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        themeIcon.classList.replace('bi-sun-fill', savedTheme === 'dark' ? 'bi-moon-fill' : 'bi-sun-fill');
+    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script src="/app.js"></script>
+</body>
+
+</html>
