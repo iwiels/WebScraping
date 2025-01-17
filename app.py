@@ -24,7 +24,7 @@ logging.getLogger('WDM').setLevel(logging.ERROR)
 os.environ['WDM_LOG_LEVEL'] = '0'
 
 app = Flask(__name__, 
-            static_folder='C:/Users/victo/OneDrive/Documentos/descuentos/fronted',
+            static_folder='backup/descuentos/frontend',
             static_url_path='')
 CORS(app)
 
