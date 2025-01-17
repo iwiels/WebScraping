@@ -37,7 +37,9 @@ def serve_static(path):
 
 @app.route('/')
 def index():
-    return send_from_directory(app.static_folder, 'index.html')
+    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        return send_from_directory(app.static_folder, 'index.html')
+    return "No index.html file found in the static folder."
 
 @app.route('/buscar', methods=['GET'])
 def buscar():
