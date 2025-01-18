@@ -34,7 +34,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_FOLDER = os.path.join(BASE_DIR, 'backup/descuentos/frontend')
 
 # Configurar el número máximo de workers
-MAX_WORKERS = 9  # Ajusta este número según los cores de tu CPU
+MAX_WORKERS = 3  # Reducir el número de workers
+TIMEOUT = 300  # 5 minutos de timeout
 
 @app.route('/<path:path>')
 def serve_static(path):
@@ -59,13 +60,8 @@ def buscar():
         tiendas = [
             ('ripley', buscar_en_ripley),
             ('falabella', buscar_en_falabella),
-            ('oechsle', buscar_en_oechsle),
-            ('estilos', buscar_en_estilos),
-            ('tailoy', buscar_en_tailoy),
-            ('realplaza', buscar_en_realplaza),
-            ('plazavea', buscar_en_plazavea),
-            ('hiraoka', buscar_en_hiraoka),
-            ('metro', buscar_en_metro)
+            ('oechsle', buscar_en_oechsle)
+            # Reducir temporalmente el número de tiendas para pruebas
         ]
 
         completed = 0
@@ -117,4 +113,4 @@ def buscar():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False, timeout=TIMEOUT)
