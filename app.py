@@ -12,9 +12,10 @@ from backup.descuentos.backend.scrapping.tailoy import buscar_en_tailoy
 from backup.descuentos.backend.scrapping.realplaza import buscar_en_realplaza
 from backup.descuentos.backend.scrapping.plazavea import buscar_en_plazavea
 from backup.descuentos.backend.scrapping.hiraoka import buscar_en_hiraoka
-from backup.descuentos.backend.scrapping.metro import buscar_en_metro;
+from backup.descuentos.backend.scrapping.metro import buscar_en_metro
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
+
+# Eliminar la importación de tqdm que no se usa
 
 # Configurar logging
 logging.getLogger().setLevel(logging.ERROR)
