@@ -3,13 +3,14 @@ import time
 import random
 import re
 from selenium import webdriver
-from selenium.webdriver.edge.options import Options
-from selenium.webdriver.edge.service import Service
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from webdriver_manager.chrome import ChromeDriverManager
 from .ripley import obtener_user_agents
 
 def buscar_en_estilos(producto):
@@ -19,30 +20,24 @@ def buscar_en_estilos(producto):
         print("Error: Lista de User-Agents vacía.")
         return []
 
-    options = Options()
+    options = ChromeOptions()
     options.add_argument("--headless")
-    options.add_argument('--log-level=3')
-    options.add_argument('--silent')
-    options.add_argument('--disable-logging')
+    options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-gpu')
-    options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
-    options.add_experimental_option('useAutomationExtension', False)
-
-    service = Service(executable_path="backup/descuentos/backend/scrapping/msedgedriver.exe")
-    driver = webdriver.Edge(service=service, options=options)
-
+    options.add_argument('--window-size=1920,1080')
+    
     resultados = []
-
+    
     try:
+        service = ChromeService(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+
         driver.get("https://www.estilos.com.pe/")
-        try:
-            search_input = WebDriverWait(driver, 15).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "input.vtex-styleguide-9-x-input"))
-            )
-        except TimeoutException:
-            driver.quit()
-            return resultados
+        
+        search_input = WebDriverWait(driver, 15).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "input.vtex-styleguide-9-x-input"))
+        )
 
         search_input.clear()
         search_input.send_keys(producto)
@@ -58,7 +53,7 @@ def buscar_en_estilos(producto):
                 )
                 items = driver.find_elements(By.CSS_SELECTOR, "div.vtex-search-result-3-x-galleryItem")
             except TimeoutException:
-  
+    
                 break
 
             for item in items:
@@ -129,7 +124,9 @@ def buscar_en_estilos(producto):
 
     except Exception as e:
         print(f"Error al buscar en Estilos: {e}")
+        return resultados
     finally:
-        driver.quit()
+        if 'driver' in locals():
+            driver.quit()
 
     return resultados
