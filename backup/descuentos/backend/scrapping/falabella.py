@@ -3,13 +3,14 @@ import time
 import random
 import re
 from selenium import webdriver
-from selenium.webdriver.edge.options import Options
-from selenium.webdriver.edge.service import Service
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from webdriver_manager.chrome import ChromeDriverManager
 from .ripley import obtener_user_agents
 from urllib.parse import urljoin, urlparse
 from collections import OrderedDict
@@ -131,22 +132,20 @@ def buscar_en_falabella(producto):
         print("Error: Lista de User-Agents vacía.")
         return resultados
 
-    options = Options()
+    options = ChromeOptions()
     options.add_argument("--headless")
-    options.add_argument('--log-level=3')
-    options.add_argument('--silent')
-    options.add_argument('--disable-logging')
+    options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-gpu')
-    options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
-    options.add_experimental_option('useAutomationExtension', False)
-
-    service = Service(executable_path="backup/descuentos/backend/scrapping/msedgedriver.exe")
-    driver = webdriver.Edge(service=service, options=options)
+    options.add_argument('--window-size=1920,1080')
+    options.add_argument('--ignore-certificate-errors')
 
     try:
+        service = ChromeService(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+        image_extractor = ImageExtractor()
+
         driver.get("https://www.falabella.com.pe/falabella-pe")
-        image_extractor = ImageExtractor()  # Initialize the image extractor
 
         # Cierra modal de ubicación si aparece
         try:
@@ -233,7 +232,9 @@ def buscar_en_falabella(producto):
 
     except Exception as e:
         print(f"Error al buscar en Falabella: {e}")
+        return resultados
     finally:
-        driver.quit()
+        if 'driver' in locals():
+            driver.quit()
 
     return resultados
