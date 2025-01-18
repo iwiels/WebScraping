@@ -61,7 +61,6 @@ def buscar():
             ('ripley', buscar_en_ripley),
             ('falabella', buscar_en_falabella),
             ('oechsle', buscar_en_oechsle)
-            # Reducir temporalmente el número de tiendas para pruebas
         ]
 
         completed = 0
@@ -69,13 +68,11 @@ def buscar():
         start_times = {}
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            # Iniciar todas las búsquedas en paralelo y guardar tiempo inicial
             for tienda, funcion in tiendas:
                 future = executor.submit(funcion, producto)
                 futures[future] = tienda
                 start_times[tienda] = time.time()
 
-            # Monitorear la finalización de cada búsqueda
             for future in as_completed(futures):
                 tienda = futures[future]
                 completed += 1
@@ -87,27 +84,37 @@ def buscar():
                     num_resultados = len(resultados_tienda) if resultados_tienda else 0
                     if resultados_tienda:
                         resultados.extend(resultados_tienda)
+
+                    # Modificar el formato del JSON para evitar problemas de parsing
+                    progress = {
+                        'type': 'progress',
+                        'store': tienda.title(),
+                        'completed': completed,
+                        'total': len(tiendas),
+                        'tiempo': tiempo_busqueda,
+                        'status': status,
+                        'resultados': num_resultados
+                    }
+                    yield json.dumps(progress, ensure_ascii=False).strip() + '\n'
+
                 except Exception as e:
                     logging.error(f"Error en {tienda}: {e}")
-                    status = "Error"
-                    num_resultados = 0
+                    yield json.dumps({
+                        'type': 'progress',
+                        'store': tienda.title(),
+                        'completed': completed,
+                        'total': len(tiendas),
+                        'tiempo': tiempo_busqueda,
+                        'status': 'Error',
+                        'resultados': 0
+                    }, ensure_ascii=False).strip() + '\n'
 
-                # Enviar actualización de progreso
-                yield json.dumps({
-                    'type': 'progress',
-                    'store': tienda.title(),
-                    'completed': completed,
-                    'total': len(tiendas),
-                    'tiempo': tiempo_busqueda,
-                    'status': status,
-                    'resultados': num_resultados
-                }) + '\n'
-
-        # Enviar resultados finales ordenados
-        yield json.dumps({
+        # Enviar resultados finales
+        final_results = {
             'type': 'results',
             'results': sorted(resultados, key=lambda x: x['precio'])
-        }) + '\n'
+        }
+        yield json.dumps(final_results, ensure_ascii=False).strip() + '\n'
 
     return Response(generate(), mimetype='application/json')
 
