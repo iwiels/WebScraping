@@ -26,7 +26,8 @@ def buscar_en_oechsle(producto):
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-gpu')
     options.add_argument('--window-size=1920,1080')
-
+    
+    driver = None
     try:
         service = ChromeService(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=options)
@@ -120,7 +121,9 @@ def buscar_en_oechsle(producto):
 
     except Exception as e:
         print(f"Error al buscar en Oechsle: {e}")
+        return resultados
     finally:
-        driver.quit()
+        if driver is not None:
+            driver.quit()
 
     return resultados
