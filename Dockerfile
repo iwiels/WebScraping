@@ -32,5 +32,5 @@ COPY . .
 ENV PORT=10000
 ENV PYTHONPATH=/app
 
-# Comando para ejecutar la aplicación
-CMD gunicorn --bind 0.0.0.0:$PORT app:app
+# Comando para ejecutar la aplicación con timeout aumentado
+CMD gunicorn --bind 0.0.0.0:$PORT --timeout 300 --workers 3 app:app
