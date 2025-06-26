@@ -2,10 +2,20 @@ import pywhatkit
 import time
 from threading import Thread
 import logging
+import asyncio # Added for running async telegram functions
+
+# Conditional import for telegram_notifications, as it might not be fully configured
+try:
+    from .telegram_notifications import send_price_drop_alert_telegram, TELEGRAM_BOT_TOKEN
+except ImportError:
+    send_price_drop_alert_telegram = None
+    TELEGRAM_BOT_TOKEN = None
+    logging.getLogger(__name__).warning("Could not import telegram_notifications. Telegram features will be unavailable.")
+
 
 # Configurar logging para notificaciones
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO) # Ensure basicConfig is called, or rely on Flask's logger
+logger = logging.getLogger(__name__) # Get a specific logger for this module
 
 def enviar_alerta_whatsapp(numero_destino, producto, resultados):
     """
@@ -151,6 +161,97 @@ def validar_numero_telefono(numero):
     
     return True, numero_limpio, ""
 
+
+def _crear_mensaje_bajada_precio(producto_info, old_price, new_price, discount_percentage):
+    """
+    Crea un mensaje específico para una bajada de precio.
+
+    Args:
+        producto_info (dict): Información del producto (nombre, tienda, link, etc.).
+        old_price (float): Precio anterior del producto.
+        new_price (float): Nuevo precio del producto.
+        discount_percentage (float): Porcentaje de descuento.
+    """
+    mensaje = f"🚨📉 *¡ALERTA DE BAJADA DE PRECIO!* 📉🚨\n\n"
+    mensaje += f"El producto que sigues ha bajado de precio:\n\n"
+    mensaje += f"📦 *Producto:* {producto_info['nombre'][:80]}{'...' if len(producto_info['nombre']) > 80 else ''}\n"
+    mensaje += f"🏪 *Tienda:* {producto_info['tienda'].title()}\n\n"
+    mensaje += f"💰 *Precio Anterior:* S/ {old_price:.2f}\n"
+    mensaje += f"💸 *Nuevo Precio:* S/ {new_price:.2f}\n"
+    mensaje += f"🔥 *Descuento:* {discount_percentage:.2f}%\n\n"
+    mensaje += f"👉 *Aprovecha la oferta aquí:*\n{producto_info['link']}\n\n"
+    mensaje += "¡No te lo pierdas! Estas ofertas pueden ser por tiempo limitado. ⏳"
+    return mensaje
+
+def enviar_alerta_whatsapp_bajada_precio(numero_destino, producto_info, old_price, new_price, discount_percentage):
+    """
+    Envía una notificación por WhatsApp sobre una bajada de precio.
+    Misma advertencia sobre pywhatkit que enviar_alerta_whatsapp.
+    """
+    try:
+        if not numero_destino or not numero_destino.startswith('+'):
+            logger.error("Error en bajada de precio: El número debe incluir el código de país.")
+            return False
+
+        mensaje = _crear_mensaje_bajada_precio(producto_info, old_price, new_price, discount_percentage)
+
+        logger.info(f"Enviando notificación de BAJADA DE PRECIO por WhatsApp a {numero_destino} para {producto_info['nombre']}")
+
+        pywhatkit.sendwhatmsg_instantly(
+            numero_destino,
+            mensaje,
+            wait_time=15,
+            tab_close=True,
+            close_time=5
+        )
+
+        logger.info(f"Mensaje de BAJADA DE PRECIO por WhatsApp enviado exitosamente a {numero_destino}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error al enviar WhatsApp de BAJADA DE PRECIO a {numero_destino}: {e}")
+        return False
+
+def enviar_notificacion_bajada_precio_async(user_identifier: str, producto_info: dict, old_price: float, new_price: float, discount_percentage: float, notification_channel: str = 'whatsapp'):
+    """
+    Envía la notificación de bajada de precio en un hilo separado, choosing the channel.
+
+    Args:
+        user_identifier (str): Phone number for WhatsApp, Chat ID for Telegram.
+        producto_info (dict): Information about the product.
+        old_price (float): The old price.
+        new_price (float): The new price.
+        discount_percentage (float): The discount percentage.
+        notification_channel (str): 'whatsapp' or 'telegram'.
+    """
+    def _enviar():
+        time.sleep(2) # Pequeña espera para que la respuesta HTTP se envíe si es aplicable
+
+        if notification_channel.lower() == 'whatsapp':
+            logger.info(f"Attempting to send price drop alert via WhatsApp to {user_identifier} for {producto_info.get('nombre', 'N/A')}")
+            enviar_alerta_whatsapp_bajada_precio(user_identifier, producto_info, old_price, new_price, discount_percentage)
+
+        elif notification_channel.lower() == 'telegram':
+            if send_price_drop_alert_telegram and TELEGRAM_BOT_TOKEN:
+                logger.info(f"Attempting to send price drop alert via Telegram to {user_identifier} for {producto_info.get('nombre', 'N/A')}")
+                try:
+                    # Need to run the async function in a way that works from a sync thread
+                    # asyncio.run() creates a new event loop.
+                    # If an event loop is already running in this thread (unlikely for a new thread),
+                    # this could be an issue. For simple threaded tasks, it's often fine.
+                    asyncio.run(send_price_drop_alert_telegram(user_identifier, producto_info, old_price, new_price, discount_percentage))
+                except Exception as e:
+                    logger.error(f"Error running async Telegram notification from thread: {e}", exc_info=True)
+            else:
+                logger.warning(f"Telegram notifications are not configured or send_price_drop_alert_telegram is None. Cannot send to {user_identifier}.")
+        else:
+            logger.error(f"Unknown notification channel: {notification_channel} for user {user_identifier}")
+
+    thread = Thread(target=_enviar, daemon=True)
+    thread.start()
+    logger.info(f"Programada notificación de bajada de precio para {producto_info.get('nombre', 'N/A')} a {user_identifier} via {notification_channel}")
+    return thread
+
 # Función para testing (solo para desarrollo)
 def test_notificacion():
     """Función de prueba - NO USAR EN PRODUCCIÓN"""
@@ -175,6 +276,19 @@ def test_notificacion():
     mensaje = _crear_mensaje_con_resultados("laptop", productos_prueba)
     print(mensaje)
     print("=" * 50)
+
+    print("=== MENSAJE DE BAJADA DE PRECIO PRUEBA ===")
+    producto_bajada_prueba = {
+        'nombre': 'Smart TV Samsung 55" Crystal UHD 4K',
+        'precio': 1799.00, # Este sería el nuevo precio
+        'tienda': 'Oechsle',
+        'link': 'https://www.oechsle.pe/smart-tv-samsung-test',
+        'descuento': 25 # Este es el descuento calculado sobre el precio anterior
+    }
+    mensaje_bajada = _crear_mensaje_bajada_precio(producto_bajada_prueba, 2399.00, 1799.00, 25.01)
+    print(mensaje_bajada)
+    print("=" * 50)
+
 
 if __name__ == '__main__':
     # Ejecutar test

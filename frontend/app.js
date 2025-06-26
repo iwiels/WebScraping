@@ -275,4 +275,78 @@ $(document).ready(function() {
             }
         });
     }
+
+    // Price Alert Subscription Logic
+    $('#subNotificationChannel').change(function() {
+        const selectedChannel = $(this).val();
+        const $identifierLabel = $('#subUserIdentifierLabel');
+        const $identifierInput = $('#subUserIdentifier');
+        const $identifierHelp = $('#subUserIdentifierHelp');
+
+        if (selectedChannel === 'whatsapp') {
+            $identifierLabel.text('Número de Teléfono (WhatsApp)');
+            $identifierInput.attr('placeholder', '+51987654321');
+            $identifierHelp.text('Para WhatsApp, incluye el código de país (ej: +51). Para Telegram, ingresa tu Chat ID.');
+        } else if (selectedChannel === 'telegram') {
+            $identifierLabel.text('Telegram Chat ID');
+            $identifierInput.attr('placeholder', 'Tu Chat ID de Telegram');
+            $identifierHelp.text('Debes iniciar una conversación con el bot primero para obtener tu Chat ID.');
+        }
+    });
+
+    $('#subscriptionForm').submit(async function(e) {
+        e.preventDefault();
+        const $submitButton = $(this).find('button[type="submit"]');
+        const $statusDiv = $('#subscriptionStatus');
+
+        const productName = $('#subProductName').val().trim();
+        const notificationChannel = $('#subNotificationChannel').val();
+        const userIdentifier = $('#subUserIdentifier').val().trim();
+        const desiredDiscountPercentage = $('#subDiscountPercentage').val().trim();
+
+        $statusDiv.html('').removeClass('alert alert-success alert-danger');
+
+        // Basic client-side validation
+        if (!productName || !userIdentifier || !desiredDiscountPercentage) {
+            $statusDiv.html('Por favor, completa todos los campos.').addClass('alert alert-danger');
+            return;
+        }
+        if (isNaN(parseFloat(desiredDiscountPercentage)) || parseFloat(desiredDiscountPercentage) <= 0 || parseFloat(desiredDiscountPercentage) >= 100) {
+            $statusDiv.html('El porcentaje de descuento debe ser un número entre 1 y 99.').addClass('alert alert-danger');
+            return;
+        }
+
+        $submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Suscribiendo...');
+
+        try {
+            const response = await fetch('/subscribe-price-alert', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_name: productName,
+                    notification_channel: notificationChannel,
+                    user_identifier: userIdentifier,
+                    desired_discount_percentage: desiredDiscountPercentage,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                $statusDiv.html(`<strong>¡Suscripción exitosa!</strong> ${result.message || ''} (Clave: ${result.subscription_key.join(', ')})`).addClass('alert alert-success');
+                $('#subscriptionForm')[0].reset(); // Reset form
+                 // Reset label and placeholder for user identifier if needed by triggering change
+                $('#subNotificationChannel').trigger('change');
+            } else {
+                $statusDiv.html(`<strong>Error:</strong> ${result.error || 'No se pudo completar la suscripción.'}`).addClass('alert alert-danger');
+            }
+        } catch (error) {
+            console.error('Subscription error:', error);
+            $statusDiv.html('Error de conexión al intentar suscribirse. Inténtalo de nuevo.').addClass('alert alert-danger');
+        } finally {
+            $submitButton.prop('disabled', false).html('<i class="bi bi-check-circle-fill"></i> Suscribirse');
+        }
+    });
 });
